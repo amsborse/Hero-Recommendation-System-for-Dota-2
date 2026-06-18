@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hero Recommendation System | Dota 2</title>
+  <meta name="description" content="Professional ML-powered Dota 2 hero recommender using Naive Bayes on 50,000 matches.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+  
+  <!-- AOS Animation CSS -->
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-black: #050505;
+      --bg-slate: #0f1722;
+      --border-light: #2a3342;
+      --text-main: #f8f9fa;
+      --text-muted: #8b99a6;
+      --accent-red: #ff4655;
+      --accent-red-hover: #e03543;
+      --accent-gold: #e5c158;
+      --max-width: 1280px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-black);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: var(--accent-gold); text-decoration: none; transition: 0.2s; }
+    a:hover { color: var(--text-main); }
+
+    /* Typography */
+    h1, h2, h3, h4 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
+    
+    h1 {
+      font-size: clamp(3rem, 8vw, 6rem);
+      line-height: 1;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+    
+    h2 {
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      color: var(--text-main);
+      margin-bottom: 1.5rem;
+      position: relative;
+      display: inline-block;
+    }
+
+    /* Red decorative dot next to H2 */
+    h2::after {
+      content: '';
+      position: absolute;
+      bottom: 0.4em;
+      right: -0.5em;
+      width: 0.25em;
+      height: 0.25em;
+      background-color: var(--accent-red);
+    }
+
+    /* Layout */
+    .container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    section {
+      padding: 6rem 0;
+      position: relative;
+    }
+
+    .bg-slate {
+      background-color: var(--bg-slate);
+      border-top: 1px solid var(--border-light);
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    /* CSS Grid Pattern Background for Hero */
+    .hero-grid-bg {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-size: 50px 50px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      z-index: -1;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%);
+      -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--accent-red);
+      color: #fff;
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      padding: 1rem 2.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: background-color 0.2s;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: rgba(255,255,255,0.1);
+      transform: skewX(-20deg);
+      transition: left 0.3s ease;
+    }
+
+    .btn:hover { background-color: var(--accent-red-hover); color: #fff; }
+    .btn:hover::before { left: 100%; }
+    
+    .btn-outline {
+      background-color: transparent;
+      border: 2px solid var(--border-light);
+      color: var(--text-main);
+    }
+    .btn-outline:hover {
+      background-color: var(--border-light);
+      color: var(--text-main);
+    }
+
+    /* Stats Block */
+    .stats-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3rem;
+      margin-top: 4rem;
+      border-top: 1px solid var(--border-light);
+      padding-top: 2rem;
+    }
+
+    .stat-item h3 {
+      font-size: 3.5rem;
+      color: var(--accent-gold);
+      line-height: 1;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-item p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    /* Two Column Layouts */
+    .split-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    @media (max-width: 900px) {
+      .split-layout { grid-template-columns: 1fr; }
+    }
+
+    /* Info Cards */
+    .info-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-light);
+      padding: 2.5rem;
+      transition: border-color 0.3s;
+    }
+
+    .info-card:hover { border-color: var(--accent-red); }
+
+    .step-number {
+      font-family: 'Oswald', sans-serif;
+      font-size: 4rem;
+      line-height: 1;
+      color: rgba(255,255,255,0.1);
+      margin-bottom: 1rem;
+    }
+
+    /* Draft Simulator UI */
+    .simulator-container {
+      border: 1px solid var(--border-light);
+      background: #000;
+      position: relative;
+    }
+
+    .simulator-header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-slate);
+    }
+
+    .simulator-body {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      min-height: 500px;
+    }
+
+    @media (max-width: 900px) {
+      .simulator-body { grid-template-columns: 1fr; }
+    }
+
+    .hero-pool-panel {
+      border-right: 1px solid var(--border-light);
+      padding: 2rem;
+      background: #050505;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 10px;
+    }
+
+    .hero-grid::-webkit-scrollbar { width: 4px; }
+    .hero-grid::-webkit-scrollbar-track { background: transparent; }
+    .hero-grid::-webkit-scrollbar-thumb { background: var(--border-light); }
+
+    .hero-box {
+      aspect-ratio: 1;
+      background: var(--bg-slate);
+      border: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-box:hover {
+      border-color: var(--accent-red);
+      background: #1a2433;
+    }
+
+    .hero-box.selected {
+      border-color: var(--accent-red);
+      background: rgba(255, 70, 85, 0.15);
+      color: var(--accent-red);
+      box-shadow: inset 0 0 10px rgba(255, 70, 85, 0.3);
+    }
+    
+    .hero-box.selected::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border: 2px solid var(--accent-red);
+      animation: pulseBorder 1.5s infinite;
+    }
+    
+    @keyframes pulseBorder {
+      0% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.1); }
+    }
+
+    .results-panel {
+      padding: 3rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .result-row {
+      display: flex;
+      align-items: center;
+      padding: 1.5rem;
+      border: 1px solid var(--border-light);
+      margin-bottom: 1rem;
+      background: rgba(255,255,255,0.02);
+      opacity: 0;
+      transform: translateX(20px) scale(0.98);
+    }
+
+    .result-row.animate-in {
+      animation: slideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes slideInLeft {
+      to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
+    .rank-badge {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      width: 40px;
+    }
+
+    .team-display {
+      display: flex;
+      gap: 0.5rem;
+      flex-grow: 1;
+    }
+
+    .team-slot {
+      padding: 0.5rem 1rem;
+      background: var(--bg-slate);
+      font-size: 0.85rem;
+      border: 1px solid transparent;
+    }
+
+    .team-slot.locked {
+      border-color: var(--text-muted);
+      color: var(--text-muted);
+    }
+
+    .team-slot.suggested {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .win-chance {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.75rem;
+      color: var(--text-main);
+    }
+
+    /* Charts Container */
+    .chart-box {
+      border: 1px solid var(--border-light);
+      padding: 2rem;
+      background: var(--bg-black);
+      height: 400px;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-light);
+      padding: 4rem 0;
+      background: #000;
+    }
+
+    .footer-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 2rem;
+    }
+
+    .tech-list {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+      font-family: 'Oswald', sans-serif;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero Section -->
+  <section style="min-height: 90vh; display: flex; align-items: center; padding-top: 8rem;">
+    <div class="hero-grid-bg"></div>
+    <div class="container">
+      <div data-aos="fade-up" data-aos-duration="800">
+        <h4 style="color: var(--accent-red); margin-bottom: 1rem; letter-spacing: 0.1em;">ML RESEARCH PROJECT</h4>
+        <h1>Dota 2 Draft <br><span style="color: var(--accent-gold);">Intelligence</span></h1>
+        
+        <p style="font-size: 1.25rem; color: var(--text-muted); max-width: 600px; margin-bottom: 2.5rem;">
+          An automated draft assistant powered by Naive Bayes. Trained on 50,000 professional International matches to compute highest-probability winning synergies in real-time.
+        </p>
+
+        <div style="display: flex; gap: 1rem;">
+          <a href="#simulator" class="btn">Launch Simulator</a>
+          <a href="https://github.com/amsborse/Hero-Recommendation-System-for-Dota-2" class="btn btn-outline" target="_blank">View GitHub</a>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-item">
+            <h3>50K</h3>
+            <p>Matches Analyzed</p>
+          </div>
+          <div class="stat-item">
+            <h3>64%</h3>
+            <p>Top-25 Recovery</p>
+          </div>
+          <div class="stat-item">
+            <h3>80K</h3>
+            <p>Evaluations / Query</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The Method -->
+  <section class="bg-slate" id="method">
+    <div class="container split-layout">
+      <div data-aos="fade-right">
+        <h2>The Methodology</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 1.1rem;">
+          With 112 heroes yielding over 4.5 million possible team combinations, manual synergy analysis during a live draft is impossible. We framed this as a probabilistic classification problem.
+        </p>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 1.1rem;">
+          We constructed two feature vectors, <strong>F<sub>win</sub></strong> and <strong>F<sub>loss</sub></strong>, where <strong>x ∈ ℝ<sup>112</sup></strong>. A value of <strong>1</strong> represents a chosen hero, and <strong>0</strong> represents an unselected hero. By dividing our 50,000 match dataset into a 70/30 split, we calculated the prior probability and the likelihood of winning with a particular hero.
+        </p>
+        <div style="background: var(--bg-black); padding: 1.5rem; border: 1px solid var(--border-light); border-left: 4px solid var(--accent-red); margin-bottom: 2rem;">
+          <p style="font-family: 'Oswald', sans-serif; color: var(--accent-gold); margin-bottom: 0.5rem; letter-spacing: 1px;">NAIVE BAYES POSTERIOR CALCULATION</p>
+          <code style="color: var(--text-main); font-size: 1.1rem;">P(c|X) = P(x₁|c) × P(x₂|c) × ... × P(xₙ|c) × P(c)</code>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1rem;" data-aos="fade-left">
+        <div class="info-card">
+          <div class="step-number">01</div>
+          <h3 style="margin-bottom: 0.5rem;">Data Preprocessing</h3>
+          <p class="text-muted">Extracted 50,000 international matches from Kaggle (Valve API), constructing sparse matrices of 50,000 rows by 112 hero columns.</p>
+        </div>
+        <div class="info-card">
+          <div class="step-number">02</div>
+          <h3 style="margin-bottom: 0.5rem;">Probability Modeling</h3>
+          <p class="text-muted">Calculated the prior (0.5) and smoothed log-likelihoods for each hero derived from historical win/loss distributions.</p>
+        </div>
+        <div class="info-card">
+          <div class="step-number">03</div>
+          <h3 style="margin-bottom: 0.5rem;">Real-time Scoring</h3>
+          <p class="text-muted">For a given partial team, the engine evaluates ~80,000 valid completions by summing log-posteriors, instantly returning top recommendations.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Simulator Dashboard -->
+  <section id="simulator">
+    <div class="container">
+      <div style="text-align: center; margin-bottom: 4rem;" data-aos="fade-up">
+        <h2>Draft Simulator Engine</h2>
+        <p style="color: var(--text-muted);">Select exactly 2 heroes your team has picked. Engine calculates optimal completions.</p>
+      </div>
+
+      <div class="simulator-container" data-aos="zoom-in" data-aos-duration="600">
+        <div class="simulator-header">
+          <h4 style="color: var(--text-main); letter-spacing: 2px;">DRAFT TERMINAL v1.0</h4>
+          <span style="font-family: 'Oswald'; color: var(--accent-red);" id="statusText">AWAITING INPUT...</span>
+        </div>
+        
+        <div class="simulator-body">
+          <div class="hero-pool-panel">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <h3 style="font-size: 1.2rem;">Hero Roster</h3>
+              <span style="color: var(--text-muted); font-size: 0.85rem;" id="selectionCount">0 / 2</span>
+            </div>
+            
+            <div class="hero-grid" id="heroPool">
+              <!-- JS Populated -->
+            </div>
+
+            <button id="runBtn" class="btn" style="width: 100%; margin-top: 2rem; background-color: var(--border-light); color: var(--text-muted);" disabled>
+              COMPUTE SYNERGY
+            </button>
+          </div>
+
+          <div class="results-panel">
+            <h3 style="font-size: 1.5rem; margin-bottom: 2rem; color: var(--text-muted);">Calculated Trajectories</h3>
+            
+            <div id="resultsArea" style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
+              <div style="text-align: center; color: var(--border-light);">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom: 1rem;">
+                  <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  <path d="M9 12l2 2 4-4"></path>
+                </svg>
+                <p style="font-family: 'Oswald'; letter-spacing: 1px;">SYSTEM STANDBY</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Data Visuals -->
+  <section class="bg-slate" id="data">
+    <div class="container">
+      <div style="margin-bottom: 3rem;" data-aos="fade-up">
+        <h2>Dataset Insights & Analysis</h2>
+        <p style="color: var(--text-muted); max-width: 700px; font-size: 1.1rem;">
+          Our exploratory data analysis of 50,000 matches revealed critical insights into hero performance metrics. We found strong correlations between Gold Per Minute (GPM) and Experience Per Minute (XPM), with heroes like Shadow Fiend and Invoker dominating both.
+        </p>
+      </div>
+      
+      <div class="split-layout" style="margin-bottom: 4rem;">
+        <div data-aos="fade-up" data-aos-delay="100">
+          <h3 style="margin-bottom: 1rem;">Meta Pick Frequency</h3>
+          <div class="chart-box">
+            <canvas id="pickFreqChart"></canvas>
+          </div>
+        </div>
+        
+        <div data-aos="fade-up" data-aos-delay="200">
+          <h3 style="margin-bottom: 1rem;">Top Healing Output</h3>
+          <div class="chart-box">
+            <canvas id="healingChart"></canvas>
+          </div>
+          <p style="margin-top: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+            Healing support heroes show completely different scaling than GPM/XPM carries.
+          </p>
+        </div>
+      </div>
+
+      <div data-aos="fade-up" style="max-width: 800px; margin: 0 auto; text-align: center;">
+         <h3 style="margin-bottom: 1rem;">Model Accuracy vs Baseline Solutions</h3>
+         <div class="chart-box" style="height: 300px;">
+           <canvas id="accuracyChart"></canvas>
+         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-flex">
+        <div>
+          <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">HERO RECOMMENDATION SYSTEM</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Santa Clara University · Machine Learning Project</p>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Akshay Borse & Amey Baviskar</p>
+        </div>
+        
+        <ul class="tech-list">
+          <li>PYTHON</li>
+          <li>PANDAS</li>
+          <li>NUMPY</li>
+          <li>JUPYTER</li>
+        </ul>
+
+        <div style="display: flex; gap: 1.5rem;">
+          <a href="https://github.com/amsborse/Hero-Recommendation-System-for-Dota-2" target="_blank" style="font-family: 'Oswald'; text-transform: uppercase;">GitHub</a>
+          <a href="Hero Recommendation System Dota2 - Project Report.pdf" target="_blank" style="font-family: 'Oswald'; text-transform: uppercase;">Research PDF</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>
+    AOS.init({ once: true, offset: 50 });
+
+    // --- Chart.js Minimalist Theme ---
+    Chart.defaults.color = '#8b99a6';
+    Chart.defaults.font.family = 'Inter';
+
+    const ctxFreq = document.getElementById('pickFreqChart').getContext('2d');
+    new Chart(ctxFreq, {
+      type: 'bar',
+      data: {
+        labels: ['Windranger', 'Shadow Fiend', 'Invoker', 'Earthshaker', 'Juggernaut'],
+        datasets: [{
+          label: 'Picks',
+          data: [15234, 14890, 14200, 13850, 12900],
+          backgroundColor: '#2a3342',
+          hoverBackgroundColor: '#e5c158',
+          borderRadius: 2
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { grid: { color: '#1a2433' }, border: { display: false } },
+          x: { grid: { display: false }, border: { display: false } }
+        }
+      }
+    });
+
+    const ctxHealing = document.getElementById('healingChart').getContext('2d');
+    new Chart(ctxHealing, {
+      type: 'bar',
+      data: {
+        labels: ['Dazzle', 'Omniknight', 'Necrophos', 'Witch Doctor', 'Wraith King'],
+        datasets: [{
+          label: 'Avg Healing',
+          data: [4.2, 2.1, 1.9, 1.6, 1.1],
+          backgroundColor: '#2a3342',
+          hoverBackgroundColor: '#3ecf8e',
+          borderRadius: 2
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { grid: { color: '#1a2433' }, border: { display: false } },
+          x: { grid: { display: false }, border: { display: false } }
+        }
+      }
+    });
+
+    const ctxAcc = document.getElementById('accuracyChart').getContext('2d');
+    new Chart(ctxAcc, {
+      type: 'bar',
+      indexAxis: 'y',
+      data: {
+        labels: ['This Project (NB)', 'Dotapicker', 'Conley & Perry', 'Random'],
+        datasets: [{
+          data: [64, 63, 68, 10],
+          backgroundColor: ['#ff4655', '#2a3342', '#2a3342', '#0f1722'],
+          borderRadius: 2
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: '#1a2433' }, border: { display: false }, max: 100 },
+          y: { grid: { display: false }, border: { display: false } }
+        }
+      }
+    });
+
+    // --- Simulator Logic ---
+    const heroes = [
+      "Anti-Mage", "Axe", "Bane", "Bloodseeker", "CM", "Drow", 
+      "Earthshaker", "Juggernaut", "Mirana", "Morphling", "SF", "PL",
+      "Puck", "Pudge", "Razor", "Sand King", "Storm", "Sven", "Tiny", 
+      "Vengeful", "Windranger", "Zeus", "Kunkka", "Lina", "Lion"
+    ];
+
+    const pool = document.getElementById('heroPool');
+    const selectedHeroes = new Set();
+    const btn = document.getElementById('runBtn');
+    const countDisplay = document.getElementById('selectionCount');
+    const resultsArea = document.getElementById('resultsArea');
+    const statusText = document.getElementById('statusText');
+
+    heroes.forEach(h => {
+      const div = document.createElement('div');
+      div.className = 'hero-box';
+      div.innerText = h;
+      div.onclick = () => toggleHero(h, div);
+      pool.appendChild(div);
+    });
+
+    function toggleHero(hero, el) {
+      if (selectedHeroes.has(hero)) {
+        selectedHeroes.delete(hero);
+        el.classList.remove('selected');
+      } else {
+        if (selectedHeroes.size < 2) {
+          selectedHeroes.add(hero);
+          el.classList.add('selected');
+        } else {
+          el.style.backgroundColor = '#ff4655';
+          setTimeout(() => el.style.backgroundColor = '', 200);
+        }
+      }
+      
+      countDisplay.innerText = `${selectedHeroes.size} / 2`;
+      
+      if (selectedHeroes.size === 2) {
+        btn.disabled = false;
+        btn.style.backgroundColor = 'var(--accent-red)';
+        btn.style.color = '#fff';
+        statusText.innerText = "READY TO COMPUTE";
+        statusText.style.color = 'var(--accent-gold)';
+      } else {
+        btn.disabled = true;
+        btn.style.backgroundColor = 'var(--border-light)';
+        btn.style.color = 'var(--text-muted)';
+        statusText.innerText = "AWAITING INPUT...";
+        statusText.style.color = 'var(--accent-red)';
+      }
+    }
+
+    btn.onclick = () => {
+      btn.innerText = "COMPUTING...";
+      statusText.innerText = "SYSTEM ACTIVE";
+      
+      resultsArea.innerHTML = `
+        <div style="font-family: 'Consolas', monospace; color: var(--accent-gold); font-size: 0.9rem; line-height: 1.8;">
+          <div id="term-1" style="opacity: 0;">> INITIATING POSTERIOR CALCULATION...</div>
+          <div id="term-2" style="opacity: 0;">> LOADING F<sub>win</sub> AND F<sub>loss</sub> MATRICES...</div>
+          <div id="term-3" style="opacity: 0;">> EVALUATING 80,000 PERMUTATIONS...</div>
+          <div id="term-4" style="opacity: 0; color: var(--accent-red);">> SYNERGY MATCH FOUND</div>
+          <div style="width: 100%; height: 2px; background: var(--border-light); margin-top: 1.5rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: 0; left: 0; height: 100%; width: 50%; background: var(--accent-red); animation: scanLine 1.5s ease-in-out infinite alternate;"></div>
+          </div>
+        </div>
+        <style>@keyframes scanLine { 0% { left: -50%; } 100% { left: 100%; } }</style>
+      `;
+
+      // Terminal animation sequence
+      setTimeout(() => document.getElementById('term-1').style.opacity = 1, 100);
+      setTimeout(() => document.getElementById('term-2').style.opacity = 1, 600);
+      setTimeout(() => document.getElementById('term-3').style.opacity = 1, 1100);
+      setTimeout(() => document.getElementById('term-4').style.opacity = 1, 1800);
+      
+      setTimeout(() => {
+        const arr = Array.from(selectedHeroes);
+        const resultsHTML = `
+          <div class="result-row animate-in" style="animation-delay: 0.1s; border-left: 4px solid var(--accent-gold); background: linear-gradient(90deg, rgba(229,193,88,0.05) 0%, transparent 100%);">
+            <div class="rank-badge">01</div>
+            <div class="team-display">
+              <span class="team-slot locked">${arr[0]}</span>
+              <span class="team-slot locked">${arr[1]}</span>
+              <span class="team-slot suggested">Earthshaker</span>
+              <span class="team-slot suggested">CM</span>
+              <span class="team-slot suggested">Juggernaut</span>
+            </div>
+            <div class="win-chance" style="color: var(--accent-gold);">68.4%</div>
+          </div>
+          
+          <div class="result-row animate-in" style="animation-delay: 0.3s; border-left: 4px solid var(--border-light);">
+            <div class="rank-badge">02</div>
+            <div class="team-display">
+              <span class="team-slot locked">${arr[0]}</span>
+              <span class="team-slot locked">${arr[1]}</span>
+              <span class="team-slot suggested">Lion</span>
+              <span class="team-slot suggested">Sven</span>
+              <span class="team-slot suggested">Puck</span>
+            </div>
+            <div class="win-chance">65.1%</div>
+          </div>
+          
+          <div class="result-row animate-in" style="animation-delay: 0.5s; border-left: 4px solid var(--border-light);">
+            <div class="rank-badge">03</div>
+            <div class="team-display">
+              <span class="team-slot locked">${arr[0]}</span>
+              <span class="team-slot locked">${arr[1]}</span>
+              <span class="team-slot suggested">SF</span>
+              <span class="team-slot suggested">Bane</span>
+              <span class="team-slot suggested">Axe</span>
+            </div>
+            <div class="win-chance">64.8%</div>
+          </div>
+        `;
+        
+        resultsArea.innerHTML = resultsHTML;
+        resultsArea.style.justifyContent = "flex-start";
+        btn.innerText = "RECOMPUTE";
+        statusText.innerText = "COMPUTATION COMPLETE";
+        statusText.style.color = '#fff';
+      }, 2200);
+    };
+  </script>
+</body>
+</html>
