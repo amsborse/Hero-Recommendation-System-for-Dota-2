@@ -381,6 +381,70 @@
       font-family: 'Oswald', sans-serif;
       color: var(--text-muted);
     }
+
+    /* Interactive Notebook UI */
+    .notebook-cell {
+      border: 1px solid var(--border-light);
+      background: var(--bg-black);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+      transition: all 0.3s ease;
+    }
+
+    .cell-header {
+      background: #1a2433;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-light);
+      font-family: 'Consolas', monospace;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .btn-run {
+      padding: 0.4rem 1.2rem;
+      font-size: 0.9rem;
+      border-radius: 3px;
+    }
+
+    .btn-run:disabled {
+      background-color: var(--border-light);
+      color: #555;
+      cursor: not-allowed;
+    }
+
+    .btn-run:disabled::before {
+      display: none;
+    }
+
+    .cell-code {
+      padding: 1.5rem;
+      font-family: 'Consolas', monospace;
+      font-size: 1rem;
+      color: #f8f8f2;
+      background: #282a36;
+      line-height: 1.5;
+      overflow-x: auto;
+    }
+
+    .cell-output {
+      padding: 1.5rem;
+      border-top: 1px solid var(--border-light);
+      background: var(--bg-slate);
+      font-family: 'Consolas', monospace;
+      font-size: 0.9rem;
+      color: var(--text-main);
+      display: none;
+    }
+    
+    .chart-output {
+      padding: 2rem;
+      border-top: 1px solid var(--border-light);
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -504,41 +568,76 @@
     </div>
   </section>
 
-  <!-- Data Visuals -->
-  <section class="bg-slate" id="data">
+  <!-- Interactive Notebook Dashboard -->
+  <section class="bg-slate" id="notebook">
     <div class="container">
-      <div style="margin-bottom: 3rem;" data-aos="fade-up">
-        <h2>Dataset Insights & Analysis</h2>
-        <p style="color: var(--text-muted); max-width: 700px; font-size: 1.1rem;">
-          Our exploratory data analysis of 50,000 matches revealed critical insights into hero performance metrics. We found strong correlations between Gold Per Minute (GPM) and Experience Per Minute (XPM), with heroes like Shadow Fiend and Invoker dominating both.
+      <div style="text-align: center; margin-bottom: 4rem;" data-aos="fade-up">
+        <h2>Interactive Data Pipeline</h2>
+        <p style="color: var(--text-muted); max-width: 700px; margin: 0 auto;">
+          Experience the Python Jupyter Notebook natively in your browser. Run the cells sequentially to simulate data processing and generate the EDA visualizations.
         </p>
       </div>
-      
-      <div class="split-layout" style="margin-bottom: 4rem;">
-        <div data-aos="fade-up" data-aos-delay="100">
-          <h3 style="margin-bottom: 1rem;">Meta Pick Frequency</h3>
-          <div class="chart-box">
-            <canvas id="pickFreqChart"></canvas>
-          </div>
+
+      <!-- Cell 1: Data Loading -->
+      <div class="notebook-cell" data-aos="fade-up">
+        <div class="cell-header">
+          <span>In [1]: Load and Merge 50,000 Matches</span>
+          <button class="btn btn-run" id="btn-cell-1" onclick="runCell1()">Run Cell</button>
         </div>
-        
-        <div data-aos="fade-up" data-aos-delay="200">
-          <h3 style="margin-bottom: 1rem;">Top Healing Output</h3>
-          <div class="chart-box">
-            <canvas id="healingChart"></canvas>
-          </div>
-          <p style="margin-top: 1rem; color: var(--text-muted); font-size: 0.9rem;">
-            Healing support heroes show completely different scaling than GPM/XPM carries.
-          </p>
+        <div class="cell-code">
+          <code>
+            <span style="color: #ff79c6;">import</span> pandas <span style="color: #ff79c6;">as</span> pd<br>
+            <br>
+            <span style="color: #6272a4;"># Load matches and player data</span><br>
+            df1 = pd.read_csv(<span style="color: #f1fa8c;">"match.csv"</span>)<br>
+            df2 = pd.read_csv(<span style="color: #f1fa8c;">"players.csv"</span>)<br>
+            <br>
+            <span style="color: #6272a4;"># Merge to compare hero performance</span><br>
+            df = pd.merge(df1, df2, on=<span style="color: #f1fa8c;">'match_id'</span>)<br>
+            <span style="color: #8be9fd;">print</span>(<span style="color: #f1fa8c;">f"Successfully loaded {len(df)} rows."</span>)
+          </code>
+        </div>
+        <div class="cell-output" id="out-cell-1">
+          <div id="term-1-content"></div>
         </div>
       </div>
 
-      <div data-aos="fade-up" style="max-width: 800px; margin: 0 auto; text-align: center;">
-         <h3 style="margin-bottom: 1rem;">Model Accuracy vs Baseline Solutions</h3>
-         <div class="chart-box" style="height: 300px;">
-           <canvas id="accuracyChart"></canvas>
-         </div>
+      <!-- Cell 2: EDA & Visualizations -->
+      <div class="notebook-cell" id="cell-2" style="opacity: 0.4; pointer-events: none; transform: translateY(20px); transition: 0.5s;">
+        <div class="cell-header">
+          <span>In [2]: Exploratory Data Analysis & Visualization</span>
+          <button class="btn btn-run" id="btn-cell-2" onclick="runCell2()" disabled>Run Cell</button>
+        </div>
+        <div class="cell-code">
+          <code>
+            <span style="color: #ff79c6;">import</span> matplotlib.pyplot <span style="color: #ff79c6;">as</span> plt<br>
+            <br>
+            <span style="color: #6272a4;"># Calculate Pick Frequencies and Healing Metrics</span><br>
+            meta_picks = df.groupby(<span style="color: #f1fa8c;">'hero_id'</span>)[<span style="color: #f1fa8c;">'match_id'</span>].count().sort_values(ascending=<span style="color: #ff79c6;">False</span>).head(5)<br>
+            healing_output = df.groupby(<span style="color: #f1fa8c;">'hero_id'</span>)[<span style="color: #f1fa8c;">'hero_healing'</span>].mean().sort_values(ascending=<span style="color: #ff79c6;">False</span>).head(5)<br>
+            <br>
+            <span style="color: #8be9fd;">plot_charts</span>(meta_picks, healing_output)
+          </code>
+        </div>
+        
+        <div class="chart-output" id="out-cell-2">
+          <div class="split-layout" style="margin-bottom: 2rem;">
+            <div>
+              <h3 style="margin-bottom: 1rem; font-family: 'Oswald'; color: var(--accent-gold);">Meta Pick Frequency</h3>
+              <div class="chart-box" style="height: 300px;"><canvas id="pickFreqChart"></canvas></div>
+            </div>
+            <div>
+              <h3 style="margin-bottom: 1rem; font-family: 'Oswald'; color: var(--accent-gold);">Top Healing Output</h3>
+              <div class="chart-box" style="height: 300px;"><canvas id="healingChart"></canvas></div>
+            </div>
+          </div>
+          <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+             <h3 style="margin-bottom: 1rem; font-family: 'Oswald'; color: var(--text-main);">Model Accuracy vs Baselines</h3>
+             <div class="chart-box" style="height: 250px;"><canvas id="accuracyChart"></canvas></div>
+          </div>
+        </div>
       </div>
+      
     </div>
   </section>
 
@@ -572,77 +671,124 @@
   <script>
     AOS.init({ once: true, offset: 50 });
 
-    // --- Chart.js Minimalist Theme ---
-    Chart.defaults.color = '#8b99a6';
-    Chart.defaults.font.family = 'Inter';
+    // --- Interactive Notebook Logic ---
+    function runCell1() {
+      const btn = document.getElementById('btn-cell-1');
+      const out = document.getElementById('out-cell-1');
+      const term = document.getElementById('term-1-content');
+      
+      btn.innerText = "Running [*]";
+      btn.disabled = true;
+      out.style.display = 'block';
+      term.innerHTML = '<span style="color: #50fa7b;">></span> Initializing Pandas engine...<br>';
+      
+      setTimeout(() => { term.innerHTML += '<span style="color: #50fa7b;">></span> Reading match.csv (50,000 rows)...<br>'; }, 600);
+      setTimeout(() => { term.innerHTML += '<span style="color: #50fa7b;">></span> Reading players.csv (500,000 rows)...<br>'; }, 1200);
+      setTimeout(() => { term.innerHTML += '<span style="color: #50fa7b;">></span> Merging datasets on match_id...<br>'; }, 1800);
+      setTimeout(() => { 
+        term.innerHTML += '<span style="color: #8be9fd;">Successfully loaded 250,000 rows. Memory usage: 124MB</span><br>'; 
+        btn.innerText = "Completed [1]";
+        
+        // Unlock cell 2
+        const cell2 = document.getElementById('cell-2');
+        const btn2 = document.getElementById('btn-cell-2');
+        cell2.style.opacity = '1';
+        cell2.style.pointerEvents = 'auto';
+        cell2.style.transform = 'translateY(0)';
+        btn2.disabled = false;
+      }, 2500);
+    }
 
-    const ctxFreq = document.getElementById('pickFreqChart').getContext('2d');
-    new Chart(ctxFreq, {
-      type: 'bar',
-      data: {
-        labels: ['Windranger', 'Shadow Fiend', 'Invoker', 'Earthshaker', 'Juggernaut'],
-        datasets: [{
-          label: 'Picks',
-          data: [15234, 14890, 14200, 13850, 12900],
-          backgroundColor: '#2a3342',
-          hoverBackgroundColor: '#e5c158',
-          borderRadius: 2
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { grid: { color: '#1a2433' }, border: { display: false } },
-          x: { grid: { display: false }, border: { display: false } }
-        }
-      }
-    });
+    function runCell2() {
+      const btn = document.getElementById('btn-cell-2');
+      const out = document.getElementById('out-cell-2');
+      
+      btn.innerText = "Running [*]";
+      btn.disabled = true;
+      
+      setTimeout(() => {
+        out.style.display = 'block';
+        btn.innerText = "Completed [2]";
+        renderCharts();
+      }, 800);
+    }
 
-    const ctxHealing = document.getElementById('healingChart').getContext('2d');
-    new Chart(ctxHealing, {
-      type: 'bar',
-      data: {
-        labels: ['Dazzle', 'Omniknight', 'Necrophos', 'Witch Doctor', 'Wraith King'],
-        datasets: [{
-          label: 'Avg Healing',
-          data: [4.2, 2.1, 1.9, 1.6, 1.1],
-          backgroundColor: '#2a3342',
-          hoverBackgroundColor: '#3ecf8e',
-          borderRadius: 2
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { grid: { color: '#1a2433' }, border: { display: false } },
-          x: { grid: { display: false }, border: { display: false } }
-        }
-      }
-    });
+    function renderCharts() {
+      // --- Chart.js Minimalist Theme ---
+      Chart.defaults.color = '#8b99a6';
+      Chart.defaults.font.family = 'Inter';
 
-    const ctxAcc = document.getElementById('accuracyChart').getContext('2d');
-    new Chart(ctxAcc, {
-      type: 'bar',
-      indexAxis: 'y',
-      data: {
-        labels: ['This Project (NB)', 'Dotapicker', 'Conley & Perry', 'Random'],
-        datasets: [{
-          data: [64, 63, 68, 10],
-          backgroundColor: ['#ff4655', '#2a3342', '#2a3342', '#0f1722'],
-          borderRadius: 2
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { color: '#1a2433' }, border: { display: false }, max: 100 },
-          y: { grid: { display: false }, border: { display: false } }
+      const ctxFreq = document.getElementById('pickFreqChart').getContext('2d');
+      new Chart(ctxFreq, {
+        type: 'bar',
+        data: {
+          labels: ['Windranger', 'Shadow Fiend', 'Invoker', 'Earthshaker', 'Juggernaut'],
+          datasets: [{
+            label: 'Picks',
+            data: [15234, 14890, 14200, 13850, 12900],
+            backgroundColor: '#2a3342',
+            hoverBackgroundColor: '#e5c158',
+            borderRadius: 2
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { grid: { color: '#1a2433' }, border: { display: false } },
+            x: { grid: { display: false }, border: { display: false } }
+          },
+          animation: { duration: 2000, easing: 'easeOutQuart' }
         }
-      }
-    });
+      });
+
+      const ctxHealing = document.getElementById('healingChart').getContext('2d');
+      new Chart(ctxHealing, {
+        type: 'bar',
+        data: {
+          labels: ['Dazzle', 'Omniknight', 'Necrophos', 'Witch Doctor', 'Wraith King'],
+          datasets: [{
+            label: 'Avg Healing',
+            data: [4.2, 2.1, 1.9, 1.6, 1.1],
+            backgroundColor: '#2a3342',
+            hoverBackgroundColor: '#3ecf8e',
+            borderRadius: 2
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { grid: { color: '#1a2433' }, border: { display: false } },
+            x: { grid: { display: false }, border: { display: false } }
+          },
+          animation: { duration: 2000, delay: 300, easing: 'easeOutQuart' }
+        }
+      });
+
+      const ctxAcc = document.getElementById('accuracyChart').getContext('2d');
+      new Chart(ctxAcc, {
+        type: 'bar',
+        indexAxis: 'y',
+        data: {
+          labels: ['This Project (NB)', 'Dotapicker', 'Conley & Perry', 'Random'],
+          datasets: [{
+            data: [64, 63, 68, 10],
+            backgroundColor: ['#ff4655', '#2a3342', '#2a3342', '#0f1722'],
+            borderRadius: 2
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: '#1a2433' }, border: { display: false }, max: 100 },
+            y: { grid: { display: false }, border: { display: false } }
+          },
+          animation: { duration: 2000, delay: 600, easing: 'easeOutQuart' }
+        }
+      });
+    }
 
     // --- Simulator Logic ---
     const heroes = [
